@@ -40,8 +40,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const submitAnswer = (gameId: string, answerIndex: number) => {
+    if (socket) {
+      socket.emit('submit_answer', { gameId, answerIndex });
+    }
+  };
+
   return (
-    <GameContext.Provider value={{ gameState, playerId, createGame, joinGame }}>
+    <GameContext.Provider value={{ gameState, playerId, createGame, joinGame, submitAnswer }}>
       {children}
     </GameContext.Provider>
   );

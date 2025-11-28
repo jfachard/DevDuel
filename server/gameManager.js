@@ -41,6 +41,49 @@ class GameManager {
     };
 
     this.players.set(playerId, { gameId, playerId });
+
+    if (Object.keys(game.players).length === 2) {
+      game.status = 'playing';
+    }
+
+    return game;
+  }
+
+  submitAnswer(gameId, playerId, answerIndex) {
+    const game = this.games.get(gameId);
+    if (!game || game.status !== 'playing') return null;
+
+    const player = game.players[playerId];
+    if (!player) return null;
+
+    const isCorrect = answerIndex === game.currentQuestion.correctAnswer;
+    const opponentId = Object.keys(game.players).find(id => id !== playerId);
+    const opponent = game.players[opponentId];
+
+    if (isCorrect) {
+      // Correct answer: Damage opponent
+      player.score += 10;
+      if (opponent) {
+        opponent.health -= 20;
+        if (opponent.health <= 0) {
+          opponent.health = 0;
+          game.status = 'finished';
+          game.winner = playerId;
+        }
+      }
+      // Get new question
+      game.currentQuestion = questions.getRandomQuestion();
+    } else {
+      // Incorrect answer: Small penalty or just feedback?
+      // Let's damage self slightly for wrong answers to discourage spamming
+      player.health -= 10;
+      if (player.health <= 0) {
+        player.health = 0;
+        game.status = 'finished';
+        game.winner = opponentId;
+      }
+    }
+
     return game;
   }
 
