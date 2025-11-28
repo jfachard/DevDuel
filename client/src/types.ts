@@ -9,6 +9,7 @@ export interface Player {
 export interface GameState {
     id: string;
     status: 'waiting' | 'playing' | 'finished';
+    category?: string;
     players: Record<string, Player>;
     currentQuestion: Question | null;
     winner?: string;
@@ -25,6 +26,6 @@ export type GameContextType = {
     gameState: GameState | null;
     playerId: string | null;
     joinGame: (gameId: string) => void;
-    createGame: () => void;
+    createGame: (category?: string) => void;
     submitAnswer: (gameId: string, answerIndex: number) => void;
 };

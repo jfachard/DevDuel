@@ -60,9 +60,9 @@ export const Arena: React.FC = () => {
             
             if (selectedOption !== null) {
               if (index === question.correctAnswer) {
-                buttonStyle = 'border-green-500 bg-green-500/20 text-white';
+                buttonStyle = 'border-green-500 bg-green-500/20 text-white animate-pop';
               } else if (index === selectedOption) {
-                buttonStyle = 'border-red-500 bg-red-500/20 text-white';
+                buttonStyle = 'border-red-500 bg-red-500/20 text-white animate-shake';
               } else {
                 buttonStyle = 'border-gray-700 bg-gray-800 text-gray-500 opacity-50';
               }

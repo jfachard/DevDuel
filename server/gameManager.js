@@ -6,11 +6,14 @@ class GameManager {
     this.players = new Map(); // socketId -> { gameId, playerId }
   }
 
-  createGame(hostId) {
+  async createGame(hostId, category = 'Code') {
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const firstQuestion = await questions.getRandomQuestion(category);
+    
     const gameState = {
       id: gameId,
       status: 'waiting', // waiting, playing, finished
+      category: category,
       players: {
         [hostId]: {
           id: hostId,
@@ -19,7 +22,7 @@ class GameManager {
           isHost: true
         }
       },
-      currentQuestion: questions.getRandomQuestion(),
+      currentQuestion: firstQuestion,
       answeredPlayers: new Set()
     };
     
@@ -50,7 +53,7 @@ class GameManager {
     return game;
   }
 
-  submitAnswer(gameId, playerId, answerIndex) {
+  async submitAnswer(gameId, playerId, answerIndex) {
     const game = this.games.get(gameId);
     if (!game || game.status !== 'playing') return null;
 
@@ -94,14 +97,26 @@ class GameManager {
       }
     }
 
+    // If round is over immediately (correct answer) or delayed (double wrong), 
+    // we return the state. The caller (server.js) handles the delay/next question.
+    // BUT, if roundOver is true immediately (correct answer), we usually want to fetch next question immediately?
+    // The previous logic was: correct -> immediate next question.
+    // Let's keep it consistent.
+
+    if (isCorrect) {
+       game.currentQuestion = await questions.getRandomQuestion(game.category, game.currentQuestion.id);
+       game.answeredPlayers.clear();
+       roundOver = false; // We already advanced, so no need for delayed advance
+    }
+
     return { game, roundOver };
   }
 
-  nextQuestion(gameId) {
+  async nextQuestion(gameId) {
     const game = this.games.get(gameId);
     if (!game) return null;
 
-    game.currentQuestion = questions.getRandomQuestion(game.currentQuestion.id);
+    game.currentQuestion = await questions.getRandomQuestion(game.category, game.currentQuestion.id);
     game.answeredPlayers.clear();
     return game;
   }

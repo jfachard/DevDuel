@@ -10,7 +10,7 @@ app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // Vite default port
+    origin: process.env.CLIENT_URL || "http://localhost:5173", // Vite default port
     methods: ["GET", "POST"]
   }
 });
@@ -18,11 +18,11 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
-  socket.on('create_game', () => {
-    const gameState = gameManager.createGame(socket.id);
+  socket.on('create_game', async (category) => {
+    const gameState = await gameManager.createGame(socket.id, category);
     socket.join(gameState.id);
     socket.emit('game_update', gameState);
-    console.log(`Game created: ${gameState.id} by ${socket.id}`);
+    console.log(`Game created: ${gameState.id} by ${socket.id} (Category: ${category})`);
   });
 
   socket.on('join_game', (gameId) => {
@@ -36,15 +36,15 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('submit_answer', ({ gameId, answerIndex }) => {
-    const result = gameManager.submitAnswer(gameId, socket.id, answerIndex);
+  socket.on('submit_answer', async ({ gameId, answerIndex }) => {
+    const result = await gameManager.submitAnswer(gameId, socket.id, answerIndex);
     if (result) {
       const { game, roundOver } = result;
       io.to(gameId).emit('game_update', game);
 
       if (roundOver) {
-        setTimeout(() => {
-          const nextGame = gameManager.nextQuestion(gameId);
+        setTimeout(async () => {
+          const nextGame = await gameManager.nextQuestion(gameId);
           if (nextGame) {
             io.to(gameId).emit('game_update', nextGame);
           }
