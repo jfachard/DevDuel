@@ -1,20 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = 'http://localhost:3001';
 
 export const useSocket = () => {
-    const socketRef = useRef<Socket | null>(null);
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     useEffect(() => {
-        socketRef.current = io(SOCKET_URL);
+        const newSocket = io(SOCKET_URL);
+        setSocket(newSocket);
 
         return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-            }
+            newSocket.disconnect();
         };
     }, []);
 
-    return socketRef.current;
+    return socket;
 };

@@ -19,7 +19,8 @@ class GameManager {
           isHost: true
         }
       },
-      currentQuestion: questions.getRandomQuestion()
+      currentQuestion: questions.getRandomQuestion(),
+      answeredPlayers: new Set()
     };
     
     this.games.set(gameId, gameState);
@@ -56,9 +57,14 @@ class GameManager {
     const player = game.players[playerId];
     if (!player) return null;
 
+    // Prevent answering twice for the same question
+    if (game.answeredPlayers.has(playerId)) return null;
+
     const isCorrect = answerIndex === game.currentQuestion.correctAnswer;
     const opponentId = Object.keys(game.players).find(id => id !== playerId);
     const opponent = game.players[opponentId];
+
+    game.answeredPlayers.add(playerId);
 
     if (isCorrect) {
       // Correct answer: Damage opponent
@@ -71,16 +77,23 @@ class GameManager {
           game.winner = playerId;
         }
       }
-      // Get new question
+      // Get new question immediately on correct answer
       game.currentQuestion = questions.getRandomQuestion();
+      game.answeredPlayers.clear();
     } else {
-      // Incorrect answer: Small penalty or just feedback?
-      // Let's damage self slightly for wrong answers to discourage spamming
+      // Incorrect answer: Damage self
       player.health -= 10;
       if (player.health <= 0) {
         player.health = 0;
         game.status = 'finished';
         game.winner = opponentId;
+      }
+
+      // Check if both players have answered incorrectly
+      if (game.answeredPlayers.size === 2) {
+        // Both wrong -> Next question
+        game.currentQuestion = questions.getRandomQuestion();
+        game.answeredPlayers.clear();
       }
     }
 

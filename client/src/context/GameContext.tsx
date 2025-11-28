@@ -29,8 +29,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [socket]);
 
   const createGame = () => {
+    console.log('createGame called. Socket:', socket?.id);
     if (socket) {
       socket.emit('create_game');
+      console.log('Emitted create_game event');
+    } else {
+      console.error('Socket not connected');
     }
   };
 
