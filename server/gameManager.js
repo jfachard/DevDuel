@@ -65,6 +65,7 @@ class GameManager {
     const opponent = game.players[opponentId];
 
     game.answeredPlayers.add(playerId);
+    let roundOver = false;
 
     if (isCorrect) {
       // Correct answer: Damage opponent
@@ -77,9 +78,7 @@ class GameManager {
           game.winner = playerId;
         }
       }
-      // Get new question immediately on correct answer
-      game.currentQuestion = questions.getRandomQuestion();
-      game.answeredPlayers.clear();
+      roundOver = true;
     } else {
       // Incorrect answer: Damage self
       player.health -= 10;
@@ -91,12 +90,19 @@ class GameManager {
 
       // Check if both players have answered incorrectly
       if (game.answeredPlayers.size === 2) {
-        // Both wrong -> Next question
-        game.currentQuestion = questions.getRandomQuestion();
-        game.answeredPlayers.clear();
+        roundOver = true;
       }
     }
 
+    return { game, roundOver };
+  }
+
+  nextQuestion(gameId) {
+    const game = this.games.get(gameId);
+    if (!game) return null;
+
+    game.currentQuestion = questions.getRandomQuestion(game.currentQuestion.id);
+    game.answeredPlayers.clear();
     return game;
   }
 

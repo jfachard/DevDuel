@@ -55,20 +55,34 @@ export const Arena: React.FC = () => {
         <h2 className="text-2xl font-bold text-white mb-6">{question.text}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {question.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => handleOptionClick(index)}
-              className={`p-4 text-left rounded-lg border-2 transition-all transform hover:scale-102 ${
-                selectedOption === index 
-                  ? 'border-blue-500 bg-blue-500/20 text-white' 
-                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-blue-400'
-              }`}
-            >
-              <span className="font-mono font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
-              {option}
-            </button>
-          ))}
+          {question.options.map((option, index) => {
+            let buttonStyle = 'border-gray-600 bg-gray-700 text-gray-300 hover:border-blue-400';
+            
+            if (selectedOption !== null) {
+              if (index === question.correctAnswer) {
+                buttonStyle = 'border-green-500 bg-green-500/20 text-white';
+              } else if (index === selectedOption) {
+                buttonStyle = 'border-red-500 bg-red-500/20 text-white';
+              } else {
+                buttonStyle = 'border-gray-700 bg-gray-800 text-gray-500 opacity-50';
+              }
+            } else if (selectedOption === index) {
+               // This case is covered above, but for hover state before selection:
+               // We can keep the default hover style defined in init
+            }
+
+            return (
+              <button
+                key={index}
+                onClick={() => handleOptionClick(index)}
+                disabled={selectedOption !== null}
+                className={`p-4 text-left rounded-lg border-2 transition-all transform ${selectedOption === null ? 'hover:scale-102' : ''} ${buttonStyle}`}
+              >
+                <span className="font-mono font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
+                {option}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

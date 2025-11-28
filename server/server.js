@@ -37,9 +37,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('submit_answer', ({ gameId, answerIndex }) => {
-    const gameState = gameManager.submitAnswer(gameId, socket.id, answerIndex);
-    if (gameState) {
-      io.to(gameId).emit('game_update', gameState);
+    const result = gameManager.submitAnswer(gameId, socket.id, answerIndex);
+    if (result) {
+      const { game, roundOver } = result;
+      io.to(gameId).emit('game_update', game);
+
+      if (roundOver) {
+        setTimeout(() => {
+          const nextGame = gameManager.nextQuestion(gameId);
+          if (nextGame) {
+            io.to(gameId).emit('game_update', nextGame);
+          }
+        }, 2000);
+      }
     }
   });
 
