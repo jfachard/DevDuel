@@ -1,0 +1,57 @@
+[
+    {
+        "id": "1",
+        "text": "What is the output of `typeof NaN` in JavaScript?",
+        "options": [
+            "'number'",
+            "'NaN'",
+            "'undefined'",
+            "'object'"
+        ],
+        "correctAnswer": 0
+    },
+    {
+        "id": "2",
+        "text": "Which CSS property is used to change the text color of an element?",
+        "options": [
+            "text-color",
+            "fg-color",
+            "color",
+            "font-color"
+        ],
+        "correctAnswer": 2
+    },
+    {
+        "id": "3",
+        "text": "In React, what hook is used to handle side effects?",
+        "options": [
+            "useState",
+            "useEffect",
+            "useContext",
+            "useReducer"
+        ],
+        "correctAnswer": 1
+    },
+    {
+        "id": "4",
+        "text": "What does SQL stand for?",
+        "options": [
+            "Structured Question Language",
+            "Strong Query Language",
+            "Structured Query Language",
+            "Simple Query Language"
+        ],
+        "correctAnswer": 2
+    },
+    {
+        "id": "5",
+        "text": "Which Docker command lists all running containers?",
+        "options": [
+            "docker run",
+            "docker ps",
+            "docker images",
+            "docker list"
+        ],
+        "correctAnswer": 1
+    }
+]
