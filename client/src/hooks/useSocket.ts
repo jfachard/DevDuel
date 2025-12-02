@@ -4,16 +4,13 @@ import { io, Socket } from 'socket.io-client';
 const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 export const useSocket = () => {
-    const [socket, setSocket] = useState<Socket | null>(null);
+    const [socket] = useState<Socket>(() => io(SOCKET_URL));
 
     useEffect(() => {
-        const newSocket = io(SOCKET_URL);
-        setSocket(newSocket);
-
         return () => {
-            newSocket.disconnect();
+            socket.disconnect();
         };
-    }, []);
+    }, [socket]);
 
     return socket;
 };
