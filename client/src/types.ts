@@ -4,6 +4,8 @@ export interface Player {
     score: number;
     health: number;
     isHost: boolean;
+    correctAnswers: number;
+    totalQuestions: number;
 }
 
 export interface GameState {
