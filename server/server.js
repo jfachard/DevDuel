@@ -6,6 +6,7 @@ const gameManager = require('./gameManager');
 
 const app = express();
 app.use(cors());
+app.get('/health', (_req, res) => res.sendStatus(200));
 
 const server = http.createServer(app);
 
@@ -16,6 +17,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const io = new Server(server, {
+  transports: ['websocket'], // skip HTTP long-polling — required behind Railway's proxy
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);

@@ -4,7 +4,9 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 // Singleton — one socket for the entire app lifetime
-const socket = io(SOCKET_URL);
+const socket = io(SOCKET_URL, {
+  transports: ['websocket'], // skip HTTP polling — required when hosted behind a proxy
+});
 
 export const useSocket = () => {
   const [connected, setConnected] = useState(socket.connected);
