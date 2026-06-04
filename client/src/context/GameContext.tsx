@@ -6,33 +6,44 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { socket, connected } = useSocket();
+
+  // Lazy initializer avoids calling setState directly inside an effect
+  const [playerId, setPlayerId] = useState<string | null>(() => socket.id ?? null);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerId, setPlayerId] = useState<string | null>(socket.id ?? null);
+  const [error, setError]         = useState<string | null>(null);
 
   useEffect(() => {
-    const onConnect = () => setPlayerId(socket.id ?? null);
-    const onGameUpdate = (state: GameState) => setGameState(state);
+    const onConnect    = () => setPlayerId(socket.id ?? null);
+    const onGameUpdate = (state: GameState) => { setGameState(state); setError(null); };
+    const onGameError  = (msg: string) => setError(msg);
 
-    socket.on('connect', onConnect);
+    socket.on('connect',     onConnect);
     socket.on('game_update', onGameUpdate);
-
-    // Handle case where socket was already connected before this effect ran
-    if (socket.connected && socket.id) setPlayerId(socket.id);
+    socket.on('game_error',  onGameError);
 
     return () => {
-      socket.off('connect', onConnect);
+      socket.off('connect',     onConnect);
       socket.off('game_update', onGameUpdate);
+      socket.off('game_error',  onGameError);
     };
   }, [socket]);
 
   const createGame = (category: string, username: string) => {
     if (!socket.connected) return;
+    setError(null);
     socket.emit('create_game', { category, username });
   };
 
   const joinGame = (gameId: string, username: string) => {
     if (!socket.connected) return;
+    setError(null);
     socket.emit('join_game', { gameId, username });
+  };
+
+  const leaveGame = () => {
+    if (gameState) socket.emit('leave_game', gameState.id);
+    setGameState(null);
+    setError(null);
   };
 
   const submitAnswer = (gameId: string, answerIndex: number) => {
@@ -41,7 +52,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <GameContext.Provider value={{ gameState, playerId, connected, createGame, joinGame, submitAnswer }}>
+    <GameContext.Provider value={{ gameState, playerId, connected, error, createGame, joinGame, leaveGame, submitAnswer }}>
       {children}
     </GameContext.Provider>
   );

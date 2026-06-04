@@ -63,7 +63,7 @@ const LABEL_STYLE: React.CSSProperties = {
 };
 
 export const Lobby: React.FC = () => {
-  const { createGame, joinGame, gameState, playerId, connected } = useGame();
+  const { createGame, joinGame, leaveGame, gameState, playerId, connected, error } = useGame();
   const [username, setUsername] = useState('');
   const [gameIdInput, setGameIdInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Code');
@@ -85,16 +85,25 @@ export const Lobby: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center w-full max-w-lg animate-fade-in">
         <div className="w-full rounded-2xl p-8 space-y-6" style={PANEL_STYLE}>
-          <div className="text-center">
-            <p className="text-xs uppercase tracking-widest font-mono mb-1" style={LABEL_STYLE}>
-              Arena Lobby
-            </p>
-            <h2
-              className="text-3xl font-black uppercase tracking-widest"
-              style={{ color: '#00E5FF', textShadow: '0 0 20px rgba(0, 229, 255, 0.5)' }}
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest font-mono mb-1" style={LABEL_STYLE}>
+                Arena Lobby
+              </p>
+              <h2
+                className="text-3xl font-black uppercase tracking-widest"
+                style={{ color: '#00E5FF', textShadow: '0 0 20px rgba(0, 229, 255, 0.5)' }}
+              >
+                Waiting Room
+              </h2>
+            </div>
+            <button
+              onClick={leaveGame}
+              className="text-xs font-mono uppercase tracking-widest px-3 py-1.5 rounded transition-all hover:brightness-125 mt-1"
+              style={{ color: '#ff4d6d', border: '1px solid rgba(255,77,109,0.35)' }}
             >
-              Waiting Room
-            </h2>
+              Leave
+            </button>
           </div>
 
           <div className="p-4 rounded-xl" style={INPUT_STYLE}>
@@ -181,6 +190,17 @@ export const Lobby: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div
+            className="flex items-center space-x-2 px-4 py-3 rounded-lg text-xs font-mono uppercase tracking-widest"
+            style={{ background: 'rgba(255,77,109,0.08)', border: '1px solid rgba(255,77,109,0.35)', color: '#ff4d6d' }}
+          >
+            <span>✕</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Username */}
         <div className="space-y-2">

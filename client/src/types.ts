@@ -28,7 +28,9 @@ export type GameContextType = {
   gameState: GameState | null;
   playerId: string | null;
   connected: boolean;
+  error: string | null;
   createGame: (category: string, username: string) => void;
   joinGame: (gameId: string, username: string) => void;
+  leaveGame: () => void;
   submitAnswer: (gameId: string, answerIndex: number) => void;
 };

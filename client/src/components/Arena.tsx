@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useGame } from "../context/GameContext";
 
 export const Arena: React.FC = () => {
-  const { gameState, playerId, submitAnswer } = useGame();
+  const { gameState, playerId, submitAnswer, connected } = useGame();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
 
   const question = gameState?.currentQuestion;
@@ -28,7 +28,19 @@ export const Arena: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-3xl space-y-4 animate-fade-in">
+    <div className="flex flex-col w-full max-w-3xl space-y-4 animate-fade-in relative">
+      {/* Disconnect overlay */}
+      {!connected && (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl space-y-3"
+          style={{ background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(4px)' }}
+        >
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#ff4d6d', boxShadow: '0 0 8px #ff4d6d' }} />
+          <p className="text-xs font-mono uppercase tracking-widest" style={{ color: 'rgba(255,77,109,0.8)' }}>
+            Connection lost — reconnecting…
+          </p>
+        </div>
+      )}
       {/* Health bars */}
       <div
         className="flex items-center p-5 rounded-2xl gap-6"
