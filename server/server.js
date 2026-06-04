@@ -11,6 +11,7 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
   'https://dev-duel-five.vercel.app',
+  'https://devduel.jfachard.com',
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
