@@ -1,95 +1,119 @@
 const axios = require('axios');
 require('dotenv').config();
+
 const localQuestions = require('./questions.json');
 
-// Cache for questions by category
+// Map our game categories to QuizAPI tags
+const CATEGORY_TAGS = {
+  Code:     'javascript',
+  Linux:    'linux',
+  SQL:      'sql',
+  Docker:   'docker',
+  DevOps:   'devops',
+  Security: 'cybersecurity',
+};
+
+// Seed all categories with local questions as fallback
 const questionCache = {
-  'Code': [...localQuestions], // Default fallback
-  'Linux': [],
-  'SQL': [],
-  'Docker': [],
-  'DevOps': []
+  Code:     [...localQuestions],
+  Linux:    [...localQuestions],
+  SQL:      [...localQuestions],
+  Docker:   [...localQuestions],
+  DevOps:   [...localQuestions],
+  Security: [...localQuestions],
 };
 
 const fetchQuestionsForCategory = async (category) => {
+  const apiKey = process.env.QUIZ_API_KEY;
+  if (!apiKey) {
+    console.warn(`[QuizAPI] QUIZ_API_KEY not set — using local questions for ${category}`);
+    return;
+  }
+
+  const tag = CATEGORY_TAGS[category] ?? 'javascript';
+
   try {
-    console.log(`Fetching ${category} questions from QuizAPI...`);
     const response = await axios.get('https://quizapi.io/api/v1/questions', {
-      headers: { 'X-Api-Key': process.env.QUIZ_API_KEY },
-      params: { 
-        limit: 20,
-        category: category,
-        // difficulty: 'Easy' // Let's get mixed difficulty for variety
-      }
+      headers: { Authorization: `Bearer ${apiKey}` },
+      params: { limit: 20, tags: tag, random: true },
     });
 
-    if (response.data && Array.isArray(response.data)) {
-      const newQuestions = response.data.map(q => {
-        const validOptions = Object.values(q.answers).filter(a => a !== null);
-        const answerKeys = Object.keys(q.answers);
-        const correctKeys = Object.keys(q.correct_answers);
-        const correctKeySuffix = correctKeys.find(k => q.correct_answers[k] === 'true'); 
-        
-        let correctIndex = -1;
-        if (correctKeySuffix) {
-            const key = correctKeySuffix.replace('_correct', '');
-            const entries = Object.entries(q.answers).filter(([k, v]) => v !== null);
-            correctIndex = entries.findIndex(([k, v]) => k === key);
-            
-            return {
-                id: q.id.toString(),
-                text: q.question,
-                options: entries.map(([k, v]) => v),
-                correctAnswer: correctIndex
-            };
-        }
-        return null;
-      }).filter(q => q !== null && q.correctAnswer !== -1 && q.options.length > 1);
+    // New API wraps results in response.data.data
+    const raw = Array.isArray(response.data)
+      ? response.data
+      : (response.data?.data ?? []);
 
-      if (newQuestions.length > 0) {
-        // Add to cache, avoiding duplicates
-        const existingIds = new Set(questionCache[category].map(q => q.id));
-        const uniqueNewQuestions = newQuestions.filter(q => !existingIds.has(q.id));
-        
-        questionCache[category] = [...questionCache[category], ...uniqueNewQuestions];
-        console.log(`Loaded ${uniqueNewQuestions.length} new ${category} questions. Total: ${questionCache[category].length}`);
-      }
+    if (!raw.length) {
+      console.warn(`[QuizAPI] No questions returned for category "${category}" (tag: ${tag})`);
+      return;
     }
-  } catch (error) {
-    console.error(`Failed to fetch ${category} from QuizAPI:`, error.message);
+
+    const parsed = raw.flatMap((q) => {
+      // New format: answers is an array of { text, isCorrect }
+      if (Array.isArray(q.answers)) {
+        const options = q.answers.map((a) => a.text).filter(Boolean);
+        const correctIndex = q.answers.findIndex((a) => a.isCorrect);
+        if (options.length < 2 || correctIndex === -1) return [];
+        return [{ id: String(q.id), text: q.text, options, correctAnswer: correctIndex }];
+      }
+
+      // Old format fallback: answers is an object { answer_a, answer_b, ... }
+      if (q.answers && typeof q.answers === 'object') {
+        const entries = Object.entries(q.answers).filter(([, v]) => v !== null);
+        const correctKey = Object.keys(q.correct_answers ?? {}).find(
+          (k) => q.correct_answers[k] === 'true'
+        );
+        if (!correctKey || entries.length < 2) return [];
+        const baseKey = correctKey.replace('_correct', '');
+        const correctIndex = entries.findIndex(([k]) => k === baseKey);
+        if (correctIndex === -1) return [];
+        return [{
+          id: String(q.id),
+          text: q.question,
+          options: entries.map(([, v]) => v),
+          correctAnswer: correctIndex,
+        }];
+      }
+
+      return [];
+    });
+
+    if (parsed.length === 0) {
+      console.warn(`[QuizAPI] Fetched questions for "${category}" but none were valid`);
+      return;
+    }
+
+    // Merge into cache, no duplicates
+    const existingIds = new Set(questionCache[category].map((q) => q.id));
+    const fresh = parsed.filter((q) => !existingIds.has(q.id));
+    questionCache[category] = [...questionCache[category], ...fresh];
+    console.log(`[QuizAPI] +${fresh.length} questions for "${category}" (total: ${questionCache[category].length})`);
+  } catch (err) {
+    if (err.response?.status === 401) {
+      console.error('[QuizAPI] 401 Unauthorized — generate a new key at https://quizapi.io (format: qz_live_...)');
+    } else {
+      console.error(`[QuizAPI] Failed to fetch "${category}":`, err.message);
+    }
   }
 };
 
 const getRandomQuestion = async (category = 'Code', excludeId) => {
-  // Initialize cache if empty (except for Code which has local fallback)
-  if ((!questionCache[category] || questionCache[category].length === 0) && category !== 'Code') {
-     questionCache[category] = []; // Init array
-  }
-
-  // If we're running low on questions for this category, fetch more in background
+  // Fetch more if running low
   if (questionCache[category].length < 5) {
     await fetchQuestionsForCategory(category);
   }
 
-  let pool = questionCache[category];
-  if (!pool || pool.length === 0) {
-    // Fallback to 'Code' (local questions) if specific category fails
-    pool = questionCache['Code'];
-  }
+  const pool = questionCache[category].length > 0
+    ? questionCache[category]
+    : questionCache['Code'];
 
-  const availableQuestions = excludeId 
-    ? pool.filter(q => q.id !== excludeId)
-    : pool;
-    
-  if (availableQuestions.length === 0) return pool[0];
+  const available = excludeId ? pool.filter((q) => q.id !== excludeId) : pool;
+  if (available.length === 0) return pool[0];
 
-  const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-  return availableQuestions[randomIndex];
+  return available[Math.floor(Math.random() * available.length)];
 };
 
-// Initial fetch to pre-warm cache and verify API connection
+// Pre-warm cache on startup (non-blocking)
 fetchQuestionsForCategory('Code');
 
-module.exports = {
-  getRandomQuestion
-};
+module.exports = { getRandomQuestion };

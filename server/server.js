@@ -8,78 +8,72 @@ const app = express();
 app.use(cors());
 
 const server = http.createServer(app);
+
 const allowedOrigins = [
-  "http://localhost:5173",
   "https://dev-duel-five.vercel.app",
-  "https://dev-duel-five.vercel.app/", // Handle potential trailing slash
   process.env.CLIENT_URL
 ].filter(Boolean);
 
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
-        callback(null, true);
-      } else {
-        console.log('Blocked by CORS:', origin);
-        callback(new Error('Not allowed by CORS'));
+      // Allow any localhost port (Vite picks the next free port)
+      if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+        return callback(null, true);
       }
+      console.log('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
     },
-    methods: ["GET", "POST"],
-    credentials: true
-  }
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
 
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  console.log('User connected:', socket.id);
 
-  socket.on('create_game', async (category) => {
-    const gameState = await gameManager.createGame(socket.id, category);
+  socket.on('create_game', async (data) => {
+    const { category = 'Code', username = 'Player' } = data ?? {};
+    const gameState = await gameManager.createGame(socket.id, category, username);
     socket.join(gameState.id);
     socket.emit('game_update', gameState);
-    console.log(`Game created: ${gameState.id} by ${socket.id} (Category: ${category})`);
+    console.log(`Game ${gameState.id} created by ${username} (category: ${category})`);
   });
 
-  socket.on('join_game', (gameId) => {
-    const gameState = gameManager.joinGame(gameId, socket.id);
+  socket.on('join_game', (data) => {
+    const { gameId, username = 'Player' } = data ?? {};
+    const gameState = gameManager.joinGame(gameId, socket.id, username);
     if (gameState) {
       socket.join(gameId);
       io.to(gameId).emit('game_update', gameState);
-      console.log(`User ${socket.id} joined game ${gameId}`);
+      console.log(`${username} joined game ${gameId}`);
     } else {
-      socket.emit('error', 'Could not join game');
+      socket.emit('error', 'Could not join game. It may be full or not exist.');
     }
   });
 
   socket.on('submit_answer', async ({ gameId, answerIndex }) => {
     const result = await gameManager.submitAnswer(gameId, socket.id, answerIndex);
-    if (result) {
-      const { game, roundOver } = result;
-      io.to(gameId).emit('game_update', game);
+    if (!result) return;
 
-      if (roundOver) {
-        setTimeout(async () => {
-          const nextGame = await gameManager.nextQuestion(gameId);
-          if (nextGame) {
-            io.to(gameId).emit('game_update', nextGame);
-          }
-        }, 2000);
-      }
+    const { game, roundOver } = result;
+    io.to(gameId).emit('game_update', game);
+
+    if (roundOver) {
+      setTimeout(async () => {
+        const nextGame = await gameManager.nextQuestion(gameId);
+        if (nextGame) io.to(gameId).emit('game_update', nextGame);
+      }, 2000);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     gameManager.removePlayer(socket.id);
-    // TODO: Notify other players in the game
   });
 });
 
 const PORT = process.env.PORT || 3001;
-
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

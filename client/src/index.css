@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 @layer utilities {
+  .cyber-bg {
+    background-color: #020617;
+    background-image: radial-gradient(rgba(0, 229, 255, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+@layer utilities {
     .animate-shake {
         animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
     }

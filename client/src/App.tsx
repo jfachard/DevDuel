@@ -6,7 +6,7 @@ import './index.css';
 
 const GameScreen = () => {
   const { gameState } = useGame();
-  
+
   if (gameState?.status === 'playing') {
     return <Arena />;
   }
@@ -14,14 +14,14 @@ const GameScreen = () => {
   if (gameState?.status === 'finished') {
     return <GameOver />;
   }
-  
+
   return <Lobby />;
 };
 
 function App() {
   return (
     <GameProvider>
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+      <div className="cyber-bg min-h-screen text-white flex items-center justify-center p-4">
         <GameScreen />
       </div>
     </GameProvider>

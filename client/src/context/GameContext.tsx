@@ -1,67 +1,47 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from "react";
-import type { GameState, GameContextType } from "../types";
-import { useSocket } from "../hooks/useSocket";
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import type { GameState, GameContextType } from '../types';
+import { useSocket } from '../hooks/useSocket';
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-export const GameProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { socket, connected } = useSocket();
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerId, setPlayerId] = useState<string | null>(null);
-  const socket = useSocket();
+  const [playerId, setPlayerId] = useState<string | null>(socket.id ?? null);
 
   useEffect(() => {
-    if (!socket) return;
+    const onConnect = () => setPlayerId(socket.id ?? null);
+    const onGameUpdate = (state: GameState) => setGameState(state);
 
-    socket.on("connect", () => {
-      console.log("Connected to server:", socket.id);
-      setPlayerId(socket.id || null);
-    });
+    socket.on('connect', onConnect);
+    socket.on('game_update', onGameUpdate);
 
-    socket.on("game_update", (newGameState: GameState) => {
-      console.log("Game update received:", newGameState);
-      setGameState(newGameState);
-    });
+    // Handle case where socket was already connected before this effect ran
+    if (socket.connected && socket.id) setPlayerId(socket.id);
 
     return () => {
-      socket.off("connect");
-      socket.off("game_update");
+      socket.off('connect', onConnect);
+      socket.off('game_update', onGameUpdate);
     };
   }, [socket]);
 
-  const createGame = (category: string = "Code") => {
-    console.log("createGame called. Socket:", socket?.id);
-    if (socket) {
-      socket.emit("create_game", category);
-      console.log("Emitted create_game event");
-    } else {
-      console.error("Socket not connected");
-    }
+  const createGame = (category: string, username: string) => {
+    if (!socket.connected) return;
+    socket.emit('create_game', { category, username });
   };
 
-  const joinGame = (gameId: string) => {
-    if (socket) {
-      socket.emit("join_game", gameId);
-    }
+  const joinGame = (gameId: string, username: string) => {
+    if (!socket.connected) return;
+    socket.emit('join_game', { gameId, username });
   };
 
   const submitAnswer = (gameId: string, answerIndex: number) => {
-    if (socket) {
-      socket.emit("submit_answer", { gameId, answerIndex });
-    }
+    if (!socket.connected) return;
+    socket.emit('submit_answer', { gameId, answerIndex });
   };
 
   return (
-    <GameContext.Provider
-      value={{ gameState, playerId, createGame, joinGame, submitAnswer }}
-    >
+    <GameContext.Provider value={{ gameState, playerId, connected, createGame, joinGame, submitAnswer }}>
       {children}
     </GameContext.Provider>
   );
@@ -70,8 +50,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
 // eslint-disable-next-line react-refresh/only-export-components
 export const useGame = () => {
   const context = useContext(GameContext);
-  if (context === undefined) {
-    throw new Error("useGame must be used within a GameProvider");
-  }
+  if (!context) throw new Error('useGame must be used within a GameProvider');
   return context;
 };
